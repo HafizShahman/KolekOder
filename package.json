@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build && rm -rf public/build && cp -R build public/build",
+        "build": "vite build",
         "dev": "vite"
     },
     "devDependencies": {
