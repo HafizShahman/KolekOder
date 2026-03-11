@@ -58,4 +58,27 @@ class RegisterController extends Controller
             return $user;
         });
     }
+
+    public function apiRegister(\Illuminate\Http\Request $request)
+    {
+        $validator = $this->validator($request->all());
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $this->create($request->all());
+
+        // Authenticate the user directly
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Registration successful',
+            'user' => $user,
+            'token' => $token
+        ], 201);
+    }
 }
