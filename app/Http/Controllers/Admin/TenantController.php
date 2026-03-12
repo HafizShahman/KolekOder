@@ -48,4 +48,56 @@ class TenantController extends Controller
         $shop->update(['is_active' => !$shop->is_active]);
         return back()->with('success', "Tenant '{$shop->shop_name}' " . ($shop->is_active ? 'activated' : 'deactivated') . '.');
     }
+
+    public function apiIndex(Request $request)
+    {
+        $query = Shop::with('user')
+            ->withCount('orders')
+            ->withCount('products')
+            ->withCount('customers');
+
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->status === 'active');
+        }
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(fn($q) => $q->where('shop_name', 'like', "%{$s}%")
+                ->orWhereHas('user', fn($uq) => $uq->where('name', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")));
+        }
+
+        $tenants = $query->latest()->paginate(15)->withQueryString();
+
+        return response()->json([
+            'tenants' => $tenants
+        ]);
+    }
+
+    public function apiShow(Shop $shop)
+    {
+        $shop->load('user');
+        $totalOrders = Order::where('shop_id', $shop->id)->count();
+        $totalSales = Order::where('shop_id', $shop->id)->where('status', 'completed')->sum('total_amount');
+        $totalCups = Order::where('shop_id', $shop->id)->where('status', 'completed')->sum('total_cups');
+        $products = $shop->products()->count();
+        $customers = $shop->customers()->count();
+
+        return response()->json([
+            'shop' => $shop,
+            'totalOrders' => $totalOrders,
+            'totalSales' => $totalSales,
+            'totalCups' => $totalCups,
+            'products' => $products,
+            'customers' => $customers
+        ]);
+    }
+
+    public function apiToggleStatus(Shop $shop)
+    {
+        $shop->update(['is_active' => !$shop->is_active]);
+        return response()->json([
+            'message' => "Tenant '{$shop->shop_name}' " . ($shop->is_active ? 'activated' : 'deactivated') . '.',
+            'is_active' => $shop->is_active
+        ]);
+    }
 }

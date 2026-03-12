@@ -79,12 +79,14 @@ class SettingController extends Controller
         $request->validate([
             'primary_color' => 'required|string|max:7',
             'secondary_color' => 'nullable|string|max:7',
+            'theme' => 'nullable|string|in:light,dark,system',
         ]);
 
         $shop->update([
             'color_setting' => [
                 'primary' => $request->primary_color,
                 'secondary' => $request->secondary_color,
+                'theme' => $request->theme ?? 'light',
             ]
         ]);
 
@@ -98,12 +100,14 @@ class SettingController extends Controller
         $request->validate([
             'primary_color' => 'required|string|max:7',
             'secondary_color' => 'nullable|string|max:7',
+            'theme' => 'nullable|string|in:light,dark,system',
         ]);
 
         $shop->update([
             'color_setting' => [
                 'primary' => $request->primary_color,
                 'secondary' => $request->secondary_color,
+                'theme' => $request->theme ?? 'light',
             ]
         ]);
 
@@ -324,7 +328,7 @@ class SettingController extends Controller
 
     public function apiUserSettings()
     {
-        return response()->json(['user' => auth()->user()]);
+        return response()->json(['user' => auth()->user()->load('shop')]);
     }
 
     public function updateUser(Request $request)

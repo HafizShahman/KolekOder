@@ -48,6 +48,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/settings/products/{product}', [SettingController::class, 'apiDestroyProduct']);
     });
 
+    // ─── System Owner (Admin) Routes ─────────────────────────────
+    Route::middleware(['role:system_owner'])->prefix('admin')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'apiIndex']);
+
+        Route::get('/tenants', [App\Http\Controllers\Admin\TenantController::class, 'apiIndex']);
+        Route::get('/tenants/{shop}', [App\Http\Controllers\Admin\TenantController::class, 'apiShow']);
+        Route::patch('/tenants/{shop}/toggle', [App\Http\Controllers\Admin\TenantController::class, 'apiToggleStatus']);
+    });
+
     // ─── Customer Routes ─────────────────────────────────────────
     Route::middleware(['role:customer'])->prefix('customer')->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\Customer\DashboardController::class, 'apiIndex']);
