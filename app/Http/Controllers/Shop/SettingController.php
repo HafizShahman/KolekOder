@@ -9,6 +9,7 @@ use App\Models\ProductAddon;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 
 class SettingController extends Controller
 {
@@ -33,9 +34,10 @@ class SettingController extends Controller
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
             'shop_logo' => 'nullable|image|max:2048',
+            'day_start_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
         ]);
 
-        $data = $request->only('shop_name', 'initial', 'shop_address');
+        $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time');
 
         if ($request->hasFile('shop_logo')) {
             if ($shop->shop_logo) {
@@ -57,9 +59,10 @@ class SettingController extends Controller
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
             'shop_logo' => 'nullable|image|max:2048',
+            'day_start_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
         ]);
 
-        $data = $request->only('shop_name', 'initial', 'shop_address');
+        $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time');
 
         if ($request->hasFile('shop_logo')) {
             if ($shop->shop_logo) {
@@ -351,5 +354,25 @@ class SettingController extends Controller
 
         auth()->user()->update($request->only('name', 'email'));
         return response()->json(['message' => 'Profile updated!', 'user' => auth()->user()]);
+    }
+
+    public function apiUpdatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        if (!Hash::check($request->current_password, auth()->user()->password)) {
+            return response()->json([
+                'message' => 'The provided password does not match our records.'
+            ], 422);
+        }
+
+        auth()->user()->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return response()->json(['message' => 'Password updated successfully!']);
     }
 }

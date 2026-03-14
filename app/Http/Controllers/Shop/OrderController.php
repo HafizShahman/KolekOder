@@ -163,7 +163,10 @@ class OrderController extends Controller
     public function apiIndex(Request $request)
     {
         $shop = auth()->user()->shop;
-        $query = Order::with(['customer', 'items.product'])->where('shop_id', $shop->id)->latest();
+        $query = Order::with(['customer', 'items.product'])
+            ->where('shop_id', $shop->id)
+            ->where('is_archived', 0) // Default to unarchived
+            ->latest();
 
         if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('type')) $query->where('type', $request->type);
@@ -176,10 +179,10 @@ class OrderController extends Controller
         }
 
         $orders = $query->paginate(15);
-        $totalOrders = Order::where('shop_id', $shop->id)->count();
-        $pendingCount = Order::where('shop_id', $shop->id)->where('status', 'pending')->count();
-        $preparingCount = Order::where('shop_id', $shop->id)->where('status', 'preparing')->count();
-        $completedCount = Order::where('shop_id', $shop->id)->where('status', 'completed')->count();
+        $totalOrders = Order::where('shop_id', $shop->id)->where('is_archived', 0)->count();
+        $pendingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'pending')->count();
+        $preparingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'preparing')->count();
+        $completedCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'completed')->count();
 
         return response()->json([
             'orders' => $orders,
@@ -313,6 +316,37 @@ class OrderController extends Controller
         return response()->json([
             'message' => "Order {$order->order_number} status updated successfully",
             'order' => $order
+        ]);
+    }
+
+    public function apiArchive()
+    {
+        $shop = auth()->user()->shop;
+        Order::where('shop_id', $shop->id)->where('is_archived', 0)->update(['is_archived' => 1]);
+        return response()->json(['message' => 'All orders archived successfully!']);
+    }
+
+    public function apiArchivedIndex(Request $request)
+    {
+        $shop = auth()->user()->shop;
+        $query = Order::with(['customer', 'items.product'])
+            ->where('shop_id', $shop->id)
+            ->where('is_archived', 1)
+            ->latest();
+
+        if ($request->filled('status')) $query->where('status', $request->status);
+        if ($request->filled('type')) $query->where('type', $request->type);
+        if ($request->filled('from')) $query->whereDate('created_at', '>=', $request->from);
+        if ($request->filled('to')) $query->whereDate('created_at', '<=', $request->to);
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(fn($q) => $q->where('order_number', 'like', "%{$s}%")
+                ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', "%{$s}%")));
+        }
+
+        $orders = $query->paginate(15);
+        return response()->json([
+            'orders' => $orders
         ]);
     }
 }

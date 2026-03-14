@@ -25,6 +25,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\Shop\DashboardController::class, 'apiIndex']);
 
         Route::get('orders', [ShopOrderController::class, 'apiIndex']);
+        Route::post('orders/archive', [ShopOrderController::class, 'apiArchive']);
+        Route::get('orders/archived', [ShopOrderController::class, 'apiArchivedIndex']);
         Route::get('orders/create', [ShopOrderController::class, 'apiCreate']);
         Route::post('orders', [ShopOrderController::class, 'apiStore']);
         Route::get('orders/{order}', [ShopOrderController::class, 'apiShow']);
@@ -40,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings/colors', [SettingController::class, 'apiUpdateColor']);
         Route::get('/settings/user', [SettingController::class, 'apiUserSettings']);
         Route::put('/settings/user', [SettingController::class, 'apiUpdateUser']);
+        Route::put('/settings/password', [SettingController::class, 'apiUpdatePassword']);
 
         Route::get('/settings/products', [SettingController::class, 'apiProducts']);
         Route::post('/settings/products', [SettingController::class, 'apiStoreProduct']);

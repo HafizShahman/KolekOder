@@ -142,6 +142,7 @@ class DashboardController extends Controller
 
         $totalOrders = Order::where('shop_id', $shop->id)
             ->where('status', 'completed')
+            ->where('is_archived', 0)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->count();
 
