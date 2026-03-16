@@ -40,6 +40,7 @@ class OrderController extends Controller
         $products = Product::with(['variants', 'addons'])
             ->where('shop_id', $shop->id)
             ->where('is_available', true)
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
         $customers = Customer::where('shop_id', $shop->id)->orderBy('name')->get();
@@ -52,6 +53,7 @@ class OrderController extends Controller
         $products = Product::with(['variants', 'addons'])
             ->where('shop_id', $shop->id)
             ->where('is_available', true)
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
         $customers = Customer::where('shop_id', $shop->id)->orderBy('name')->get();

@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings/password', [SettingController::class, 'apiUpdatePassword']);
 
         Route::get('/settings/products', [SettingController::class, 'apiProducts']);
+        Route::put('/settings/products/reorder', [SettingController::class, 'apiUpdateProductsOrder']);
         Route::post('/settings/products', [SettingController::class, 'apiStoreProduct']);
         Route::put('/settings/products/{product}', [SettingController::class, 'apiUpdateProduct']);
         Route::patch('/settings/products/{product}/toggle', [SettingController::class, 'apiToggleProduct']);

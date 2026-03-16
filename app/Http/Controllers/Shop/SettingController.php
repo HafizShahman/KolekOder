@@ -120,14 +120,14 @@ class SettingController extends Controller
     public function products()
     {
         $shop = auth()->user()->shop;
-        $products = Product::with(['variants', 'addons'])->where('shop_id', $shop->id)->orderBy('name')->get();
+        $products = Product::with(['variants', 'addons'])->where('shop_id', $shop->id)->orderBy('sort_order')->orderBy('name')->get();
         return view('shop.settings.products', compact('products', 'shop'));
     }
 
     public function apiProducts()
     {
         $shop = auth()->user()->shop;
-        $products = Product::with(['variants', 'addons'])->where('shop_id', $shop->id)->orderBy('name')->get();
+        $products = Product::with(['variants', 'addons'])->where('shop_id', $shop->id)->orderBy('sort_order', 'asc')->get();
         return response()->json(['products' => $products, 'shop' => $shop]);
     }
 
@@ -322,6 +322,26 @@ class SettingController extends Controller
         abort_if($product->shop_id !== $shop->id, 403);
         $product->delete();
         return response()->json(['message' => "{$product->name} deleted."]);
+    }
+
+    public function apiUpdateProductsOrder(Request $request)
+    {
+        $shop = auth()->user()->shop;
+
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'required|integer|exists:products,id',
+        ]);
+
+        $productIds = $request->product_ids;
+
+        foreach ($productIds as $index => $id) {
+            Product::where('id', $id)
+                ->where('shop_id', $shop->id)
+                ->update(['sort_order' => $index]);
+        }
+
+        return response()->json(['message' => 'Products order updated!']);
     }
 
     public function userSettings()
