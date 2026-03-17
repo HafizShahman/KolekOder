@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -174,17 +175,26 @@ class OrderController extends Controller
         if ($request->filled('type')) $query->where('type', $request->type);
         if ($request->filled('from')) $query->whereDate('created_at', '>=', $request->from);
         if ($request->filled('to')) $query->whereDate('created_at', '<=', $request->to);
+        
+        // Default to current business day if no specific filters are applied
+        if (!$request->filled('from') && !$request->filled('to') && !$request->filled('search') && !$request->filled('status')) {
+            [$startDate, $endDate] = $shop->getBusinessDateRange();
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(fn($q) => $q->where('order_number', 'like', "%{$s}%")
                 ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', "%{$s}%")));
         }
 
+        [$startDate, $endDate] = $shop->getBusinessDateRange();
+
         $orders = $query->paginate(15);
-        $totalOrders = Order::where('shop_id', $shop->id)->where('is_archived', 0)->count();
-        $pendingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'pending')->count();
-        $preparingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'preparing')->count();
-        $completedCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'completed')->count();
+        $totalOrders = Order::where('shop_id', $shop->id)->where('is_archived', 0)->whereBetween('created_at', [$startDate, $endDate])->count();
+        $pendingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'pending')->whereBetween('created_at', [$startDate, $endDate])->count();
+        $preparingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'preparing')->whereBetween('created_at', [$startDate, $endDate])->count();
+        $completedCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'completed')->whereBetween('created_at', [$startDate, $endDate])->count();
 
         return response()->json([
             'orders' => $orders,
@@ -331,23 +341,47 @@ class OrderController extends Controller
     public function apiArchivedIndex(Request $request)
     {
         $shop = auth()->user()->shop;
-        $query = Order::with(['customer', 'items.product'])
+        
+        $query = Order::where('shop_id', $shop->id)
+            ->where('is_archived', 1)
+            ->select('business_date', 
+                DB::raw('COUNT(*) as total_orders'),
+                DB::raw('SUM(total_amount) as total_amount'),
+                DB::raw('SUM(total_cups) as total_cups')
+            )
+            ->groupBy('business_date')
+            ->orderByDesc('business_date');
+
+        if ($request->filled('from')) $query->whereDate('business_date', '>=', $request->from);
+        if ($request->filled('to')) $query->whereDate('business_date', '<=', $request->to);
+
+        $summaries = $query->paginate(15);
+        
+        return response()->json([
+            'history' => $summaries
+        ]);
+    }
+
+    public function apiArchivedDayDetail(Request $request, $date)
+    {
+        $shop = auth()->user()->shop;
+        
+        $orders = Order::with(['customer', 'items.product'])
             ->where('shop_id', $shop->id)
             ->where('is_archived', 1)
-            ->latest();
+            ->whereDate('business_date', $date)
+            ->latest()
+            ->get();
 
-        if ($request->filled('status')) $query->where('status', $request->status);
-        if ($request->filled('type')) $query->where('type', $request->type);
-        if ($request->filled('from')) $query->whereDate('created_at', '>=', $request->from);
-        if ($request->filled('to')) $query->whereDate('created_at', '<=', $request->to);
-        if ($request->filled('search')) {
-            $s = $request->search;
-            $query->where(fn($q) => $q->where('order_number', 'like', "%{$s}%")
-                ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', "%{$s}%")));
-        }
+        $stats = [
+            'total_amount' => $orders->sum('total_amount'),
+            'total_cups' => $orders->sum('total_cups'),
+            'total_orders' => $orders->count(),
+        ];
 
-        $orders = $query->paginate(15);
         return response()->json([
+            'date' => $date,
+            'stats' => $stats,
             'orders' => $orders
         ]);
     }

@@ -34,4 +34,28 @@ class Shop extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Get the business date range for a given date (defaults to now).
+     */
+    public function getBusinessDateRange(?\Illuminate\Support\Carbon $date = null): array
+    {
+        $now = $date ?: now();
+        $dayStartTime = $this->day_start_time ?: '00:00';
+        
+        $currentDate = $now->copy()->startOfDay();
+        $startOfShiftToday = \Illuminate\Support\Carbon::parse($currentDate->toDateString() . ' ' . $dayStartTime);
+        
+        if ($now->lt($startOfShiftToday)) {
+            // We are currently in the shift that started yesterday
+            $start = $startOfShiftToday->copy()->subDay();
+            $end = $startOfShiftToday->copy();
+        } else {
+            // We are in the shift that started today
+            $start = $startOfShiftToday->copy();
+            $end = $startOfShiftToday->copy()->addDay();
+        }
+        
+        return [$start, $end];
+    }
 }

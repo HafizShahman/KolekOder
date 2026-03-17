@@ -29,8 +29,7 @@ class DashboardController extends Controller
                 $endDate = $now->copy()->endOfMonth();
                 break;
             default: // daily
-                $startDate = $now->copy()->startOfDay();
-                $endDate = $now->copy()->endOfDay();
+                [$startDate, $endDate] = $shop->getBusinessDateRange($now);
                 break;
         }
 

@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('orders', [ShopOrderController::class, 'apiIndex']);
         Route::post('orders/archive', [ShopOrderController::class, 'apiArchive']);
         Route::get('orders/archived', [ShopOrderController::class, 'apiArchivedIndex']);
+        Route::get('orders/archived/day/{date}', [ShopOrderController::class, 'apiArchivedDayDetail']);
         Route::get('orders/create', [ShopOrderController::class, 'apiCreate']);
         Route::post('orders', [ShopOrderController::class, 'apiStore']);
         Route::get('orders/{order}', [ShopOrderController::class, 'apiShow']);
