@@ -18,7 +18,11 @@ class DashboardController extends Controller
         $period = $request->get('period', 'daily');
 
         // Date ranges based on period
-        $now = Carbon::now();
+        $now = now();
+        $startDate = null;
+        $endDate = null;
+        $businessDate = null;
+
         switch ($period) {
             case 'weekly':
                 $startDate = $now->copy()->startOfWeek();
@@ -29,34 +33,44 @@ class DashboardController extends Controller
                 $endDate = $now->copy()->endOfMonth();
                 break;
             default: // daily
-                [$startDate, $endDate] = $shop->getBusinessDateRange($now);
+                $businessDate = $shop->getBusinessDate($now);
                 break;
         }
 
+    /**
+     * Helper to apply date filters to a query
+     */
+    $applyFilters = function ($query) use ($startDate, $endDate, $businessDate) {
+        if ($businessDate) {
+            return $query->where('business_date', $businessDate);
+        }
+        if ($startDate && $endDate) {
+            return $query->whereBetween('created_at', [$startDate, $endDate]);
+        }
+        return $query->where('is_archived', 0); // Default fallback for unarchived
+    };
+
         // Analytics
-        $totalCups = Order::where('shop_id', $shop->id)
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->sum('total_cups');
-
-        $totalOrders = Order::where('shop_id', $shop->id)
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->count();
-
-        $totalSales = Order::where('shop_id', $shop->id)
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->sum('total_amount');
+        $totalCups = $applyFilters(Order::where('shop_id', $shop->id)->where('status', 'completed'))->sum('total_cups');
+        $totalOrders = $applyFilters(Order::where('shop_id', $shop->id)->where('status', 'completed'))->count();
+        $totalSales = $applyFilters(Order::where('shop_id', $shop->id)->where('status', 'completed'))->sum('total_amount');
 
         // Top products ranking
-        $topProducts = DB::table('order_items')
+        $topProductsQuery = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->where('orders.shop_id', $shop->id)
-            ->where('orders.status', 'completed')
-            ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->select(
+            ->where('orders.status', 'completed');
+        
+        if ($businessDate) {
+            $topProductsQuery->where('orders.business_date', $businessDate);
+        } elseif ($startDate && $endDate) {
+            $topProductsQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+        } else {
+            $topProductsQuery->where('orders.is_archived', 0);
+        }
+
+        $topProducts = $topProductsQuery->select(
                 'products.name',
                 'products.price',
                 DB::raw('SUM(order_items.quantity) as total_sold'),
@@ -70,12 +84,20 @@ class DashboardController extends Controller
         $maxSold = $topProducts->max('total_sold') ?: 1;
 
         // Customer ranking
-        $topCustomers = DB::table('orders')
+        $topCustomersQuery = DB::table('orders')
             ->join('customers', 'orders.customer_id', '=', 'customers.id')
             ->where('orders.shop_id', $shop->id)
-            ->where('orders.status', 'completed')
-            ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->select(
+            ->where('orders.status', 'completed');
+
+        if ($businessDate) {
+            $topCustomersQuery->where('orders.business_date', $businessDate);
+        } elseif ($startDate && $endDate) {
+            $topCustomersQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+        } else {
+            $topCustomersQuery->where('orders.is_archived', 0);
+        }
+
+        $topCustomers = $topCustomersQuery->select(
                 'customers.name',
                 'customers.phone',
                 DB::raw('COUNT(orders.id) as order_count'),
@@ -117,7 +139,11 @@ class DashboardController extends Controller
         $period = $request->get('period', 'daily');
 
         // Date ranges based on period
-        $now = Carbon::now();
+        $now = now();
+        $startDate = null;
+        $endDate = null;
+        $businessDate = null;
+
         switch ($period) {
             case 'weekly':
                 $startDate = $now->copy()->startOfWeek();
@@ -128,36 +154,41 @@ class DashboardController extends Controller
                 $endDate = $now->copy()->endOfMonth();
                 break;
             default: // daily
-                $startDate = $now->copy()->startOfDay();
-                $endDate = $now->copy()->endOfDay();
+                $businessDate = $shop->getBusinessDate($now);
                 break;
         }
 
+        $applyFilters = function ($query) use ($startDate, $endDate, $businessDate) {
+            if ($businessDate) {
+                return $query->where('business_date', $businessDate);
+            }
+            if ($startDate && $endDate) {
+                return $query->whereBetween('created_at', [$startDate, $endDate]);
+            }
+            return $query->where('is_archived', 0);
+        };
+
         // Analytics
-        $totalCups = Order::where('shop_id', $shop->id)
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->sum('total_cups');
-
-        $totalOrders = Order::where('shop_id', $shop->id)
-            ->where('status', 'completed')
-            ->where('is_archived', 0)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->count();
-
-        $totalSales = Order::where('shop_id', $shop->id)
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->sum('total_amount');
+        $totalCups = $applyFilters(Order::where('shop_id', $shop->id)->where('status', 'completed'))->sum('total_cups');
+        $totalOrders = $applyFilters(Order::where('shop_id', $shop->id)->where('status', 'completed'))->count();
+        $totalSales = $applyFilters(Order::where('shop_id', $shop->id)->where('status', 'completed'))->sum('total_amount');
 
         // Top products ranking
-        $topProducts = DB::table('order_items')
+        $topProductsQuery = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->where('orders.shop_id', $shop->id)
-            ->where('orders.status', 'completed')
-            ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->select(
+            ->where('orders.status', 'completed');
+
+        if ($businessDate) {
+            $topProductsQuery->where('orders.business_date', $businessDate);
+        } elseif ($startDate && $endDate) {
+            $topProductsQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+        } else {
+            $topProductsQuery->where('orders.is_archived', 0);
+        }
+
+        $topProducts = $topProductsQuery->select(
                 'products.name',
                 'products.price',
                 DB::raw('SUM(order_items.quantity) as total_sold'),
@@ -171,12 +202,20 @@ class DashboardController extends Controller
         $maxSold = $topProducts->max('total_sold') ?: 1;
 
         // Customer ranking
-        $topCustomers = DB::table('orders')
+        $topCustomersQuery = DB::table('orders')
             ->join('customers', 'orders.customer_id', '=', 'customers.id')
             ->where('orders.shop_id', $shop->id)
-            ->where('orders.status', 'completed')
-            ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->select(
+            ->where('orders.status', 'completed');
+
+        if ($businessDate) {
+            $topCustomersQuery->where('orders.business_date', $businessDate);
+        } elseif ($startDate && $endDate) {
+            $topCustomersQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+        } else {
+            $topCustomersQuery->where('orders.is_archived', 0);
+        }
+
+        $topCustomers = $topCustomersQuery->select(
                 'customers.name',
                 'customers.phone',
                 DB::raw('COUNT(orders.id) as order_count'),
@@ -201,6 +240,7 @@ class DashboardController extends Controller
         return response()->json([
             'shop' => $shop,
             'period' => $period,
+            'current_business_date' => $businessDate,
             'totalCups' => $totalCups,
             'totalOrders' => $totalOrders,
             'totalSales' => $totalSales,

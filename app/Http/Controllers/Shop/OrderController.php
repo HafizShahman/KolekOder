@@ -176,11 +176,7 @@ class OrderController extends Controller
         if ($request->filled('from')) $query->whereDate('created_at', '>=', $request->from);
         if ($request->filled('to')) $query->whereDate('created_at', '<=', $request->to);
         
-        // Default to current business day if no specific filters are applied
-        if (!$request->filled('from') && !$request->filled('to') && !$request->filled('search') && !$request->filled('status')) {
-            [$startDate, $endDate] = $shop->getBusinessDateRange();
-            $query->whereBetween('created_at', [$startDate, $endDate]);
-        }
+        // No longer defaulting to current business day to allow manual archiving
 
         if ($request->filled('search')) {
             $s = $request->search;
@@ -188,13 +184,17 @@ class OrderController extends Controller
                 ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', "%{$s}%")));
         }
 
-        [$startDate, $endDate] = $shop->getBusinessDateRange();
-
         $orders = $query->paginate(15);
-        $totalOrders = Order::where('shop_id', $shop->id)->where('is_archived', 0)->whereBetween('created_at', [$startDate, $endDate])->count();
-        $pendingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'pending')->whereBetween('created_at', [$startDate, $endDate])->count();
-        $preparingCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'preparing')->whereBetween('created_at', [$startDate, $endDate])->count();
-        $completedCount = Order::where('shop_id', $shop->id)->where('is_archived', 0)->where('status', 'completed')->whereBetween('created_at', [$startDate, $endDate])->count();
+
+        // Stats calculation should match the unarchived list behavior
+        $statsQuery = Order::where('shop_id', $shop->id)->where('is_archived', 0);
+        if ($request->filled('from')) $statsQuery->whereDate('created_at', '>=', $request->from);
+        if ($request->filled('to')) $statsQuery->whereDate('created_at', '<=', $request->to);
+
+        $totalOrders = (clone $statsQuery)->count();
+        $pendingCount = (clone $statsQuery)->where('status', 'pending')->count();
+        $preparingCount = (clone $statsQuery)->where('status', 'preparing')->count();
+        $completedCount = (clone $statsQuery)->where('status', 'completed')->count();
 
         return response()->json([
             'orders' => $orders,

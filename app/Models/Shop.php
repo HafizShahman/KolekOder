@@ -38,13 +38,13 @@ class Shop extends Model
     /**
      * Get the business date range for a given date (defaults to now).
      */
-    public function getBusinessDateRange(?\Illuminate\Support\Carbon $date = null): array
+    public function getBusinessDateRange(?\Carbon\Carbon $date = null): array
     {
         $now = $date ?: now();
         $dayStartTime = $this->day_start_time ?: '00:00';
         
         $currentDate = $now->copy()->startOfDay();
-        $startOfShiftToday = \Illuminate\Support\Carbon::parse($currentDate->toDateString() . ' ' . $dayStartTime);
+        $startOfShiftToday = \Carbon\Carbon::parse($currentDate->toDateString() . ' ' . $dayStartTime);
         
         if ($now->lt($startOfShiftToday)) {
             // We are currently in the shift that started yesterday
@@ -57,5 +57,19 @@ class Shop extends Model
         }
         
         return [$start, $end];
+    }
+
+    /**
+     * Get the current business date string (Y-m-d).
+     */
+    public function getBusinessDate(?\Carbon\Carbon $date = null): string
+    {
+        $now = $date ?: now();
+        $dayStartTime = $this->day_start_time ?: '00:00';
+        
+        if ($now->format('H:i') < $dayStartTime) {
+            return $now->copy()->subDay()->toDateString();
+        }
+        return $now->toDateString();
     }
 }
