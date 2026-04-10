@@ -8,6 +8,13 @@ use App\Http\Controllers\Shop\OrderController as ShopOrderController;
 use App\Http\Controllers\Shop\SettingController;
 
 use App\Http\Controllers\Shop\CustomerController as ShopCustomerController;
+use App\Http\Controllers\Api\PublicShopController;
+
+// ─── Public Routes (QR Ordering) ─────────────────────────────
+Route::get('/public/shop/{initial}', [PublicShopController::class, 'getShop']);
+Route::get('/public/shop/{initial}/products', [PublicShopController::class, 'getProducts']);
+Route::get('/public/orders/{order}', [PublicShopController::class, 'getOrderStatus']);
+Route::post('/public/orders', [PublicShopController::class, 'storeOrder']);
 
 Route::post('/login', [LoginController::class, 'apiLogin']);
 Route::post('/register', [RegisterController::class, 'apiRegister']);
