@@ -76,5 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('orders', [App\Http\Controllers\Customer\OrderController::class, 'apiIndex']);
         Route::get('orders/{order}', [App\Http\Controllers\Customer\OrderController::class, 'apiShow']);
         Route::get('rewards', [App\Http\Controllers\Customer\DashboardController::class, 'apiRewards']);
+
+        Route::get('profile', [App\Http\Controllers\Customer\ProfileController::class, 'apiShow']);
+        Route::put('profile', [App\Http\Controllers\Customer\ProfileController::class, 'apiUpdate']);
+        Route::put('profile/password', [App\Http\Controllers\Customer\ProfileController::class, 'apiUpdatePassword']);
     });
 });
