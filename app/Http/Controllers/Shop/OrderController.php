@@ -139,7 +139,7 @@ class OrderController extends Controller
         if ($request->customer_id) {
             $customer = Customer::find($request->customer_id);
             if ($customer) {
-                $customer->increment('collect_points', $totalCups);
+                $customer->increment('collect_points', 1);
             }
         }
 
@@ -286,7 +286,7 @@ class OrderController extends Controller
         if ($request->customer_id) {
             $customer = Customer::find($request->customer_id);
             if ($customer) {
-                $customer->increment('collect_points', $totalCups);
+                $customer->increment('collect_points', 1);
             }
         }
 

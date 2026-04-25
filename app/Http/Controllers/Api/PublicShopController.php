@@ -102,7 +102,7 @@ class PublicShopController extends Controller
 
             // Award loyalty points to the customer record
             if ($customerId) {
-                $customer->increment('collect_points', $totalCups);
+                $customer->increment('collect_points', 1);
             }
 
             return response()->json([

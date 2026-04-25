@@ -75,5 +75,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('orders', [App\Http\Controllers\Customer\OrderController::class, 'apiIndex']);
         Route::get('orders/{order}', [App\Http\Controllers\Customer\OrderController::class, 'apiShow']);
+        Route::get('rewards', [App\Http\Controllers\Customer\DashboardController::class, 'apiRewards']);
     });
 });

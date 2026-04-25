@@ -54,4 +54,19 @@ class DashboardController extends Controller
             'recentOrders' => $recentOrders
         ]);
     }
+
+    public function apiRewards()
+    {
+        $user = auth()->user();
+
+        // Get all customer records linked to this user, including their shop info
+        $rewards = Customer::with('shop')
+            ->where('user_id', $user->id)
+            ->where('collect_points', '>', 0)
+            ->get();
+
+        return response()->json([
+            'rewards' => $rewards
+        ]);
+    }
 }
