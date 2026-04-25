@@ -15,7 +15,7 @@
                 </div>
                 <h1 class="text-2xl font-black italic uppercase tracking-tight text-foreground">{{ config('app.name') }}
                 </h1>
-                <p class="text-sm text-muted-foreground mt-1.5">{{ __('Register your shop to get started') }}</p>
+                <p class="text-sm text-muted-foreground mt-1.5">{{ __('Create an account to get started') }}</p>
             </div>
 
             {{-- Register Card --}}
@@ -23,44 +23,7 @@
                 <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data" class="space-y-5">
                     @csrf
 
-                    {{-- Shop Details Section --}}
-                    <div class="pb-4 border-b border-border">
-                        <p class="text-[10px] font-black uppercase tracking-widest text-primary mb-3">
-                            {{ __('Shop Details') }}</p>
 
-                        <div class="space-y-3">
-                            <div>
-                                <label for="shop_name"
-                                    class="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">{{ __('Shop Name') }}</label>
-                                <input id="shop_name" type="text"
-                                    class="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all @error('shop_name') border-destructive ring-2 ring-destructive/30 @enderror"
-                                    name="shop_name" value="{{ old('shop_name') }}" required placeholder="Your shop name">
-                                @error('shop_name')
-                                    <p class="mt-1.5 text-xs font-semibold text-destructive">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div>
-                                <label for="shop_address"
-                                    class="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">{{ __('Shop Address') }}</label>
-                                <textarea id="shop_address" name="shop_address" rows="2"
-                                    class="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                                    placeholder="Your shop location">{{ old('shop_address') }}</textarea>
-                            </div>
-
-                            <div>
-                                <label
-                                    class="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">{{ __('Shop Logo') }}</label>
-                                <input type="file" name="shop_logo" accept="image/*"
-                                    class="text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-primary-foreground">
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- User Details Section --}}
-                    <div>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-primary mb-3">
-                            {{ __('User Details') }}</p>
 
                         <div class="space-y-3">
                             <div>
@@ -109,7 +72,7 @@
 
                     <button type="submit"
                         class="w-full h-12 bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200">
-                        {{ __('Register Shop') }}
+                        {{ __('Register Account') }}
                     </button>
                 </form>
             </div>

@@ -27,9 +27,6 @@ class RegisterController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'shop_name' => ['required', 'string', 'max:255'],
-            'shop_address' => ['nullable', 'string', 'max:500'],
-            'shop_logo' => ['nullable', 'image', 'max:2048'],
         ]);
     }
 
@@ -40,20 +37,8 @@ class RegisterController extends Controller
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
-                'role' => 'shop',
+                'role' => 'customer',
             ]);
-
-            $shopData = [
-                'user_id' => $user->id,
-                'shop_name' => $data['shop_name'],
-                'shop_address' => $data['shop_address'] ?? null,
-            ];
-
-            if (isset($data['shop_logo']) && $data['shop_logo']) {
-                $shopData['shop_logo'] = $data['shop_logo']->store('shop-logos', 'public');
-            }
-
-            Shop::create($shopData);
 
             return $user;
         });
