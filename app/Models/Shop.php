@@ -35,6 +35,11 @@ class Shop extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(ShopSubscription::class);
+    }
+
     /**
      * Get the business date range for a given date (defaults to now).
      */

@@ -135,13 +135,7 @@ class OrderController extends Controller
             $order->items()->create($d);
         }
 
-        // Award collect points to customer
-        if ($request->customer_id) {
-            $customer = Customer::find($request->customer_id);
-            if ($customer) {
-                $customer->increment('collect_points', 1);
-            }
-        }
+        // Points will be awarded when the order is marked as completed
 
         return redirect()->route('shop.orders.index')->with('success', "Order {$order->order_number} created!");
     }
@@ -159,7 +153,22 @@ class OrderController extends Controller
         $shop = auth()->user()->shop;
         abort_if($order->shop_id !== $shop->id, 403);
         $request->validate(['status' => 'required|in:pending,preparing,completed,cancelled']);
+        $oldStatus = $order->status;
         $order->update(['status' => $request->status]);
+
+        // Award point only when completed
+        if ($oldStatus !== 'completed' && $request->status === 'completed' && $order->customer_id) {
+            $order->customer()->increment('collect_points', $order->total_cups);
+        } elseif ($oldStatus === 'completed' && $request->status !== 'completed' && $order->customer_id) {
+            // Remove point if status is changed away from completed
+            $customer = $order->customer;
+            if ($customer && $customer->collect_points > 0) {
+                // Ensure we don't decrement below 0
+                $decrementAmount = min($order->total_cups, $customer->collect_points);
+                $customer->decrement('collect_points', $decrementAmount);
+            }
+        }
+
         return back()->with('success', "Order {$order->order_number} updated to {$request->status}.");
     }
 
@@ -282,13 +291,7 @@ class OrderController extends Controller
             $order->items()->create($d);
         }
 
-        // Award collect points to customer
-        if ($request->customer_id) {
-            $customer = Customer::find($request->customer_id);
-            if ($customer) {
-                $customer->increment('collect_points', 1);
-            }
-        }
+        // Points will be awarded when the order is marked as completed
 
         return response()->json([
             'message' => 'Order created successfully!',
@@ -323,7 +326,21 @@ class OrderController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $oldStatus = $order->status;
         $order->update(['status' => $request->status]);
+
+        // Award point only when completed
+        if ($oldStatus !== 'completed' && $request->status === 'completed' && $order->customer_id) {
+            $order->customer()->increment('collect_points', $order->total_cups);
+        } elseif ($oldStatus === 'completed' && $request->status !== 'completed' && $order->customer_id) {
+            // Remove point if status is changed away from completed
+            $customer = $order->customer;
+            if ($customer && $customer->collect_points > 0) {
+                // Ensure we don't decrement below 0
+                $decrementAmount = min($order->total_cups, $customer->collect_points);
+                $customer->decrement('collect_points', $decrementAmount);
+            }
+        }
 
         return response()->json([
             'message' => "Order {$order->order_number} status updated successfully",

@@ -100,10 +100,7 @@ class PublicShopController extends Controller
                 ]);
             }
 
-            // Award loyalty points to the customer record
-            if ($customerId) {
-                $customer->increment('collect_points', 1);
-            }
+            // Removed loyalty points increment (now handled when order is marked completed)
 
             return response()->json([
                 'message' => 'Order placed successfully',

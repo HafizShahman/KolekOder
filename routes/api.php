@@ -67,6 +67,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/tenants', [App\Http\Controllers\Admin\TenantController::class, 'apiIndex']);
         Route::get('/tenants/{shop}', [App\Http\Controllers\Admin\TenantController::class, 'apiShow']);
         Route::patch('/tenants/{shop}/toggle', [App\Http\Controllers\Admin\TenantController::class, 'apiToggleStatus']);
+        
+        Route::get('/tenants/{shop}/subscriptions', [App\Http\Controllers\Admin\SubscriptionController::class, 'apiIndex']);
+        Route::post('/tenants/{shop}/subscriptions', [App\Http\Controllers\Admin\SubscriptionController::class, 'apiStore']);
+        
+        Route::post('/recalculate-points', [App\Http\Controllers\Admin\DashboardController::class, 'apiRecalculatePoints']);
     });
 
     // ─── Customer Routes ─────────────────────────────────────────

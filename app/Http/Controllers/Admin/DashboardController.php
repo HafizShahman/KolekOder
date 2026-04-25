@@ -32,7 +32,7 @@ class DashboardController extends Controller
 
     public function apiIndex()
     {
-        $totalIncome = Order::where('status', 'completed')->sum('total_amount');
+        $totalIncome = \App\Models\ShopSubscription::sum('amount');
         $totalTenants = Shop::count();
         $activeTenants = Shop::where('is_active', true)->count();
         $inactiveTenants = Shop::where('is_active', false)->count();
@@ -49,6 +49,28 @@ class DashboardController extends Controller
             'totalOrders' => $totalOrders,
             'totalCups' => $totalCups,
             'recentShops' => $recentShops
+        ]);
+    }
+
+    public function apiRecalculatePoints()
+    {
+        $customers = \App\Models\Customer::all();
+        $recalculated = 0;
+
+        foreach ($customers as $customer) {
+            $expectedPoints = \App\Models\Order::where('customer_id', $customer->id)
+                ->where('status', 'completed')
+                ->sum('total_cups');
+
+            if ($customer->collect_points !== (int)$expectedPoints) {
+                $customer->update(['collect_points' => $expectedPoints]);
+                $recalculated++;
+            }
+        }
+
+        return response()->json([
+            'message' => "Points recalculated successfully.",
+            'affected_customers' => $recalculated
         ]);
     }
 }
