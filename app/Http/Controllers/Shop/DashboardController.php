@@ -25,12 +25,12 @@ class DashboardController extends Controller
 
         switch ($period) {
             case 'weekly':
-                $startDate = $now->copy()->startOfWeek();
-                $endDate = $now->copy()->endOfWeek();
+                $startDate = $now->copy()->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
+                $endDate = $now->copy()->endOfWeek(\Carbon\Carbon::SUNDAY)->toDateString();
                 break;
             case 'monthly':
-                $startDate = $now->copy()->startOfMonth();
-                $endDate = $now->copy()->endOfMonth();
+                $startDate = $now->copy()->startOfMonth()->toDateString();
+                $endDate = $now->copy()->endOfMonth()->toDateString();
                 break;
             default: // daily
                 $businessDate = $shop->getBusinessDate($now);
@@ -45,7 +45,7 @@ class DashboardController extends Controller
             return $query->where('business_date', $businessDate);
         }
         if ($startDate && $endDate) {
-            return $query->whereBetween('created_at', [$startDate, $endDate]);
+            return $query->whereBetween('business_date', [$startDate, $endDate]);
         }
         return $query->where('is_archived', 0); // Default fallback for unarchived
     };
@@ -65,7 +65,7 @@ class DashboardController extends Controller
         if ($businessDate) {
             $topProductsQuery->where('orders.business_date', $businessDate);
         } elseif ($startDate && $endDate) {
-            $topProductsQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+            $topProductsQuery->whereBetween('orders.business_date', [$startDate, $endDate]);
         } else {
             $topProductsQuery->where('orders.is_archived', 0);
         }
@@ -92,7 +92,7 @@ class DashboardController extends Controller
         if ($businessDate) {
             $topCustomersQuery->where('orders.business_date', $businessDate);
         } elseif ($startDate && $endDate) {
-            $topCustomersQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+            $topCustomersQuery->whereBetween('orders.business_date', [$startDate, $endDate]);
         } else {
             $topCustomersQuery->where('orders.is_archived', 0);
         }
@@ -146,12 +146,12 @@ class DashboardController extends Controller
 
         switch ($period) {
             case 'weekly':
-                $startDate = $now->copy()->startOfWeek();
-                $endDate = $now->copy()->endOfWeek();
+                $startDate = $now->copy()->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
+                $endDate = $now->copy()->endOfWeek(\Carbon\Carbon::SUNDAY)->toDateString();
                 break;
             case 'monthly':
-                $startDate = $now->copy()->startOfMonth();
-                $endDate = $now->copy()->endOfMonth();
+                $startDate = $now->copy()->startOfMonth()->toDateString();
+                $endDate = $now->copy()->endOfMonth()->toDateString();
                 break;
             default: // daily
                 $businessDate = $shop->getBusinessDate($now);
@@ -163,7 +163,7 @@ class DashboardController extends Controller
                 return $query->where('business_date', $businessDate);
             }
             if ($startDate && $endDate) {
-                return $query->whereBetween('created_at', [$startDate, $endDate]);
+                return $query->whereBetween('business_date', [$startDate, $endDate]);
             }
             return $query->where('is_archived', 0);
         };
@@ -183,7 +183,7 @@ class DashboardController extends Controller
         if ($businessDate) {
             $topProductsQuery->where('orders.business_date', $businessDate);
         } elseif ($startDate && $endDate) {
-            $topProductsQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+            $topProductsQuery->whereBetween('orders.business_date', [$startDate, $endDate]);
         } else {
             $topProductsQuery->where('orders.is_archived', 0);
         }
@@ -210,7 +210,7 @@ class DashboardController extends Controller
         if ($businessDate) {
             $topCustomersQuery->where('orders.business_date', $businessDate);
         } elseif ($startDate && $endDate) {
-            $topCustomersQuery->whereBetween('orders.created_at', [$startDate, $endDate]);
+            $topCustomersQuery->whereBetween('orders.business_date', [$startDate, $endDate]);
         } else {
             $topCustomersQuery->where('orders.is_archived', 0);
         }
