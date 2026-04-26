@@ -33,17 +33,17 @@ class SettingController extends Controller
             'shop_name' => 'required|string|max:255',
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
-            'shop_logo' => 'nullable|image|max:2048',
+            'shop_logo' => 'nullable|image|max:512',
             'day_start_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
         ]);
 
         $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time');
 
         if ($request->hasFile('shop_logo')) {
-            if ($shop->shop_logo) {
-                Storage::disk('public')->delete($shop->shop_logo);
-            }
-            $data['shop_logo'] = $request->file('shop_logo')->store('shop-logos', 'public');
+            $file = $request->file('shop_logo');
+            $mime = $file->getMimeType();
+            $fileContent = file_get_contents($file->getRealPath());
+            $data['shop_logo'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
         }
 
         $shop->update($data);
@@ -58,17 +58,17 @@ class SettingController extends Controller
             'shop_name' => 'required|string|max:255',
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
-            'shop_logo' => 'nullable|image|max:2048',
+            'shop_logo' => 'nullable|image|max:512',
             'day_start_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
         ]);
 
         $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time');
 
         if ($request->hasFile('shop_logo')) {
-            if ($shop->shop_logo) {
-                Storage::disk('public')->delete($shop->shop_logo);
-            }
-            $data['shop_logo'] = $request->file('shop_logo')->store('shop-logos', 'public');
+            $file = $request->file('shop_logo');
+            $mime = $file->getMimeType();
+            $fileContent = file_get_contents($file->getRealPath());
+            $data['shop_logo'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
         }
 
         $shop->update($data);
@@ -180,6 +180,7 @@ class SettingController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
+            'image' => 'nullable|image|max:512',
             'variants' => 'nullable|array',
             'variants.*.name' => 'required|string|max:50',
             'variants.*.price_modifier' => 'nullable|numeric',
@@ -189,11 +190,20 @@ class SettingController extends Controller
             'addons.*.price' => 'nullable|numeric|min:0',
         ]);
 
-        $product = Product::create([
+        $productData = [
             'shop_id' => $shop->id,
             'name' => $request->name,
             'price' => $request->price,
-        ]);
+        ];
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $mime = $file->getMimeType();
+            $fileContent = file_get_contents($file->getRealPath());
+            $productData['image'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
+        }
+
+        $product = Product::create($productData);
 
         if ($request->filled('variants')) {
             foreach ($request->variants as $v) {
@@ -229,6 +239,7 @@ class SettingController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
+            'image' => 'nullable|image|max:512',
             'variants' => 'nullable|array',
             'variants.*.id' => 'nullable|integer|exists:product_variants,id',
             'variants.*.name' => 'required|string|max:50',
@@ -240,10 +251,19 @@ class SettingController extends Controller
             'addons.*.price' => 'nullable|numeric|min:0',
         ]);
 
-        $product->update([
+        $productData = [
             'name' => $request->name,
             'price' => $request->price,
-        ]);
+        ];
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $mime = $file->getMimeType();
+            $fileContent = file_get_contents($file->getRealPath());
+            $productData['image'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
+        }
+
+        $product->update($productData);
 
         // Sync Variants
         if ($request->has('variants')) {
