@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Shop;
 
+use App\Events\NewOrderReceived;
+use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Order;
@@ -293,6 +295,8 @@ class OrderController extends Controller
 
         // Points will be awarded when the order is marked as completed
 
+        broadcast(new NewOrderReceived($order))->toOthers();
+
         return response()->json([
             'message' => 'Order created successfully!',
             'order' => $order->load(['customer', 'items.product'])
@@ -341,6 +345,8 @@ class OrderController extends Controller
                 $customer->decrement('collect_points', $decrementAmount);
             }
         }
+
+        broadcast(new OrderStatusUpdated($order->fresh()));
 
         return response()->json([
             'message' => "Order {$order->order_number} status updated successfully",

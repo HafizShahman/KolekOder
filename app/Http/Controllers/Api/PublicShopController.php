@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\NewOrderReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Shop;
 use App\Models\Product;
@@ -101,6 +102,8 @@ class PublicShopController extends Controller
             }
 
             // Removed loyalty points increment (now handled when order is marked completed)
+
+            broadcast(new NewOrderReceived($order->fresh(['shop', 'items.product', 'customer'])));
 
             return response()->json([
                 'message' => 'Order placed successfully',

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -15,6 +16,9 @@ Route::get('/public/shop/{initial}', [PublicShopController::class, 'getShop']);
 Route::get('/public/shop/{initial}/products', [PublicShopController::class, 'getProducts']);
 Route::get('/public/orders/{order}', [PublicShopController::class, 'getOrderStatus']);
 Route::post('/public/orders', [PublicShopController::class, 'storeOrder']);
+
+// Broadcasting auth endpoint (required for private channels with Sanctum tokens)
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 Route::post('/login', [LoginController::class, 'apiLogin']);
 Route::post('/register', [RegisterController::class, 'apiRegister']);
