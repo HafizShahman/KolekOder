@@ -139,6 +139,8 @@ class OrderController extends Controller
 
         // Points will be awarded when the order is marked as completed
 
+        broadcast(new NewOrderReceived($order))->toOthers();
+
         return redirect()->route('shop.orders.index')->with('success', "Order {$order->order_number} created!");
     }
 
@@ -357,8 +359,13 @@ class OrderController extends Controller
     public function apiArchive()
     {
         $shop = auth()->user()->shop;
-        Order::where('shop_id', $shop->id)->where('is_archived', 0)->update(['is_archived' => 1]);
-        return response()->json(['message' => 'All orders archived successfully!']);
+        // Only archive orders that are in a terminal state (completed or cancelled)
+        // Never archive active pending/preparing orders
+        $count = Order::where('shop_id', $shop->id)
+            ->where('is_archived', 0)
+            ->whereIn('status', ['completed', 'cancelled'])
+            ->update(['is_archived' => 1]);
+        return response()->json(['message' => "{$count} order(s) archived successfully!"]);
     }
 
     public function apiArchivedIndex(Request $request)

@@ -12,17 +12,29 @@ use App\Http\Controllers\Shop\CustomerController as ShopCustomerController;
 use App\Http\Controllers\Api\PublicShopController;
 
 // ─── Public Routes (QR Ordering) ─────────────────────────────
-Route::get('/public/shop/{initial}', [PublicShopController::class, 'getShop']);
-Route::get('/public/shop/{initial}/products', [PublicShopController::class, 'getProducts']);
-Route::get('/public/orders/{order}', [PublicShopController::class, 'getOrderStatus']);
-Route::post('/public/orders', [PublicShopController::class, 'storeOrder']);
+Route::middleware(['throttle:60,1'])->group(function () {
+    Route::get('/public/shop/{initial}', [PublicShopController::class, 'getShop']);
+    Route::get('/public/shop/{initial}/products', [PublicShopController::class, 'getProducts']);
+    Route::get('/public/orders/{orderId}', [PublicShopController::class, 'getOrderStatus']);
+    Route::post('/public/orders', [PublicShopController::class, 'storeOrder'])->middleware('throttle:20,1');
+});
 
 // Broadcasting auth endpoint (required for private channels with Sanctum tokens)
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
-Route::post('/login', [LoginController::class, 'apiLogin']);
-Route::post('/register', [RegisterController::class, 'apiRegister']);
+Route::middleware(['throttle:10,1'])->group(function () {
+    Route::post('/login', [LoginController::class, 'apiLogin']);
+    Route::post('/register', [RegisterController::class, 'apiRegister']);
+});
 Route::post('/logout', [LoginController::class, 'apiLogout'])->middleware('auth:sanctum');
+
+// ─── Password Reset ───────────────────────────────────────────
+Route::post('/forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])
+    ->middleware('throttle:5,1')
+    ->name('password.email');
+Route::post('/reset-password', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])
+    ->middleware('throttle:5,1')
+    ->name('password.update');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
@@ -62,6 +74,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings/products/{product}', [SettingController::class, 'apiUpdateProduct']);
         Route::patch('/settings/products/{product}/toggle', [SettingController::class, 'apiToggleProduct']);
         Route::delete('/settings/products/{product}', [SettingController::class, 'apiDestroyProduct']);
+
+        // Shop Redemptions
+        Route::get('/redemptions', [\App\Http\Controllers\Shop\RedemptionController::class, 'apiIndex']);
+        Route::post('/redemptions/verify', [\App\Http\Controllers\Shop\RedemptionController::class, 'apiVerify']);
+        Route::post('/redemptions/apply', [\App\Http\Controllers\Shop\RedemptionController::class, 'apiApply']);
     });
 
     // ─── System Owner (Admin) Routes ─────────────────────────────
@@ -69,6 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'apiIndex']);
 
         Route::get('/tenants', [App\Http\Controllers\Admin\TenantController::class, 'apiIndex']);
+        Route::post('/tenants', [App\Http\Controllers\Admin\TenantController::class, 'apiCreate']);
         Route::get('/tenants/{shop}', [App\Http\Controllers\Admin\TenantController::class, 'apiShow']);
         Route::patch('/tenants/{shop}/toggle', [App\Http\Controllers\Admin\TenantController::class, 'apiToggleStatus']);
         
@@ -89,5 +107,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('profile', [App\Http\Controllers\Customer\ProfileController::class, 'apiShow']);
         Route::put('profile', [App\Http\Controllers\Customer\ProfileController::class, 'apiUpdate']);
         Route::put('profile/password', [App\Http\Controllers\Customer\ProfileController::class, 'apiUpdatePassword']);
+
+        Route::get('favorites', [App\Http\Controllers\Customer\FavoriteOrderController::class, 'apiIndex']);
+        Route::post('favorites', [App\Http\Controllers\Customer\FavoriteOrderController::class, 'apiStore']);
+        Route::delete('favorites/{favorite}', [App\Http\Controllers\Customer\FavoriteOrderController::class, 'apiDestroy']);
+
+        Route::get('redemptions', [\App\Http\Controllers\Customer\RedemptionController::class, 'apiIndex']);
+        Route::post('redemptions', [\App\Http\Controllers\Customer\RedemptionController::class, 'apiCreate']);
+        Route::post('claim-order', [\App\Http\Controllers\Customer\GuestClaimController::class, 'apiClaim']);
     });
 });

@@ -25,10 +25,11 @@ class PublicShopController extends Controller
 
     /**
      * Get all available products for a shop by its initial.
+     * Only returns products for active shops.
      */
     public function getProducts($initial)
     {
-        $shop = Shop::where('initial', $initial)->firstOrFail();
+        $shop = Shop::where('initial', $initial)->where('is_active', true)->firstOrFail();
         $products = Product::where('shop_id', $shop->id)
             ->where('is_available', true)
             ->with(['variants', 'addons'])
@@ -39,76 +40,125 @@ class PublicShopController extends Controller
     }
 
     /**
-     * Get the status of a specific order.
+     * Get the status of a specific order using a tracking token.
      */
-    public function getOrderStatus($orderId)
+    public function getOrderStatus(Request $request, $orderId)
     {
-        $order = Order::with(['shop', 'items.product'])->findOrFail($orderId);
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        $order = Order::with(['shop', 'items.product'])
+            ->where('id', $orderId)
+            ->where('tracking_token', $request->token)
+            ->firstOrFail();
+
         return response()->json(['order' => $order]);
     }
 
     /**
      * Store a new public (guest or authenticated) order.
+     * Total is always recalculated server-side from actual product prices.
      */
     public function storeOrder(Request $request)
     {
         $request->validate([
-            'shop_id' => 'required|exists:shops,id',
-            'user_id' => 'nullable|exists:users,id',
-            'items' => 'required|array',
-            'customer_name' => 'required|string',
-            'total_amount' => 'required|numeric',
+            'shop_id'       => 'required|exists:shops,id',
+            'items'         => 'required|array|min:1',
+            'items.*.product_id' => 'required|integer',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'items.*.variant'    => 'nullable|string',
+            'items.*.addons'     => 'nullable|array',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone'=> 'nullable|string|max:30',
         ]);
 
-        return DB::transaction(function () use ($request) {
-            $totalCups = collect($request->items)->sum('quantity');
+        // Verify the shop is active
+        $shop = Shop::where('id', $request->shop_id)->where('is_active', true)->firstOrFail();
 
-            // Resolve Customer ID
+        return DB::transaction(function () use ($request, $shop) {
+            $totalAmount = 0;
+            $totalCups   = 0;
+            $orderItemsData = [];
+
+            foreach ($request->items as $item) {
+                // Verify product belongs to this shop
+                $product = Product::with(['variants', 'addons'])
+                    ->where('id', $item['product_id'])
+                    ->where('shop_id', $shop->id)
+                    ->where('is_available', true)
+                    ->firstOrFail();
+
+                $qty       = (int) $item['quantity'];
+                $unitPrice = (float) $product->price;
+
+                // Add variant price modifier
+                if (!empty($item['variant'])) {
+                    $variant = $product->variants->where('name', $item['variant'])->first();
+                    if ($variant) {
+                        $unitPrice += (float) $variant->price_modifier;
+                    }
+                }
+
+                // Add addon prices
+                $selectedAddons = [];
+                if (!empty($item['addons'])) {
+                    foreach ($item['addons'] as $addonId) {
+                        $addon = $product->addons->find($addonId);
+                        if ($addon) {
+                            $unitPrice += (float) $addon->price;
+                            $selectedAddons[] = ['id' => $addon->id, 'name' => $addon->name, 'price' => $addon->price];
+                        }
+                    }
+                }
+
+                $sub          = $unitPrice * $qty;
+                $totalAmount += $sub;
+                $totalCups   += $qty;
+
+                $orderItemsData[] = [
+                    'product_id' => $product->id,
+                    'quantity'   => $qty,
+                    'unit_price' => $unitPrice,
+                    'subtotal'   => $sub,
+                    'variant'    => $item['variant'] ?? null,
+                    'addons'     => !empty($selectedAddons) ? $selectedAddons : [],
+                ];
+            }
+
+            // Resolve Customer ID from auth token only — never trust user_id from request body
             $customerId = null;
-            if ($request->user_id) {
+            if (auth('sanctum')->check()) {
+                $authUser = auth('sanctum')->user();
                 $customer = Customer::firstOrCreate(
-                    [
-                        'user_id' => $request->user_id,
-                        'shop_id' => $request->shop_id
-                    ],
-                    [
-                        'name' => $request->customer_name,
-                        'phone' => $request->customer_phone ?? null,
-                    ]
+                    ['user_id' => $authUser->id, 'shop_id' => $shop->id],
+                    ['name' => $request->customer_name, 'phone' => $request->customer_phone ?? null]
                 );
                 $customerId = $customer->id;
             }
 
+            $trackingToken = bin2hex(random_bytes(16));
+
             $order = Order::create([
-                'shop_id' => $request->shop_id,
-                'customer_id' => $customerId, // Linked to shop-specific customer record
-                'total_amount' => $request->total_amount,
-                'total_cups' => $totalCups,
-                'status' => 'pending',
-                'notes' => "Public Order: {$request->customer_name}" . ($request->customer_phone ? " ({$request->customer_phone})" : ""),
+                'shop_id'        => $shop->id,
+                'customer_id'    => $customerId,
+                'total_amount'   => $totalAmount,
+                'total_cups'     => $totalCups,
+                'status'         => 'pending',
+                'tracking_token' => $trackingToken,
+                'notes'          => "Public Order: {$request->customer_name}" . ($request->customer_phone ? " ({$request->customer_phone})" : ""),
             ]);
 
-            foreach ($request->items as $item) {
-                // Map item details from the public checkout
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'] ?? 0,
-                    'subtotal' => ($item['unit_price'] ?? 0) * $item['quantity'],
-                    'variant' => $item['variant'] ?? null,
-                    'addons' => $item['addons'] ?? [],
-                ]);
+            foreach ($orderItemsData as $d) {
+                $order->items()->create($d);
             }
-
-            // Removed loyalty points increment (now handled when order is marked completed)
 
             broadcast(new NewOrderReceived($order->fresh(['shop', 'items.product', 'customer'])));
 
             return response()->json([
-                'message' => 'Order placed successfully',
-                'order' => $order->fresh(['shop', 'items']),
-                'tracking_token' => bin2hex(random_bytes(16))
+                'message'        => 'Order placed successfully',
+                'order'          => $order->fresh(['shop', 'items']),
+                'tracking_token' => $trackingToken,
             ]);
         });
     }

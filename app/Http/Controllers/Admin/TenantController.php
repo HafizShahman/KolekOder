@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Shop;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class TenantController extends Controller
 {
@@ -99,5 +101,35 @@ class TenantController extends Controller
             'message' => "Tenant '{$shop->shop_name}' " . ($shop->is_active ? 'activated' : 'deactivated') . '.',
             'is_active' => $shop->is_active
         ]);
+    }
+
+    public function apiCreate(Request $request)
+    {
+        $request->validate([
+            'name'      => 'required|string|max:255',
+            'email'     => 'required|email|unique:users,email',
+            'password'  => 'required|string|min:8',
+            'shop_name' => 'required|string|max:255',
+            'initial'   => 'required|string|max:10|alpha_dash|unique:shops,initial',
+        ]);
+
+        $user = User::create([
+            'name'     => $request->name,
+            'email'    => $request->email,
+            'password' => Hash::make($request->password),
+            'role'     => 'shop',
+        ]);
+
+        $shop = Shop::create([
+            'user_id'   => $user->id,
+            'shop_name' => $request->shop_name,
+            'initial'   => $request->initial,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'message' => "Tenant '{$shop->shop_name}' created successfully.",
+            'shop'    => $shop->load('user'),
+        ], 201);
     }
 }

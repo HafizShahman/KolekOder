@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Shop extends Model
 {
-    protected $fillable = ['user_id', 'shop_name', 'initial', 'shop_logo', 'shop_address', 'color_setting', 'day_start_time', 'is_active'];
+    protected $fillable = ['user_id', 'shop_name', 'initial', 'shop_logo', 'shop_address', 'color_setting', 'day_start_time', 'is_active', 'redemption_threshold', 'redemption_reward'];
 
     protected $casts = [
         'color_setting' => 'array',
         'is_active' => 'boolean',
+        'redemption_threshold' => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -38,6 +39,11 @@ class Shop extends Model
     public function subscriptions(): HasMany
     {
         return $this->hasMany(ShopSubscription::class);
+    }
+
+    public function redemptions(): HasMany
+    {
+        return $this->hasMany(Redemption::class);
     }
 
     /**

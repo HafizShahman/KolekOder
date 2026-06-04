@@ -34,10 +34,12 @@ class SettingController extends Controller
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
             'shop_logo' => 'nullable|image|max:512',
-            'day_start_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
+            'day_start_time' => 'nullable|string|regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/',
+            'redemption_threshold' => 'nullable|integer|min:1|max:9999',
+            'redemption_reward' => 'nullable|string|max:255',
         ]);
 
-        $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time');
+        $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time', 'redemption_threshold', 'redemption_reward');
 
         if ($request->hasFile('shop_logo')) {
             $file = $request->file('shop_logo');
@@ -59,10 +61,12 @@ class SettingController extends Controller
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
             'shop_logo' => 'nullable|image|max:512',
-            'day_start_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
+            'day_start_time' => 'nullable|string|regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/',
+            'redemption_threshold' => 'nullable|integer|min:1|max:9999',
+            'redemption_reward' => 'nullable|string|max:255',
         ]);
 
-        $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time');
+        $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time', 'redemption_threshold', 'redemption_reward');
 
         if ($request->hasFile('shop_logo')) {
             $file = $request->file('shop_logo');
@@ -317,6 +321,7 @@ class SettingController extends Controller
         $shop = auth()->user()->shop;
         abort_if($product->shop_id !== $shop->id, 403);
         $product->update(['is_available' => !$product->is_available]);
+        $product->refresh();
         return back()->with('success', "{$product->name} " . ($product->is_available ? 'enabled' : 'disabled') . '.');
     }
 
@@ -325,7 +330,11 @@ class SettingController extends Controller
         $shop = auth()->user()->shop;
         abort_if($product->shop_id !== $shop->id, 403);
         $product->update(['is_available' => !$product->is_available]);
-        return response()->json(['message' => "{$product->name} " . ($product->is_available ? 'enabled' : 'disabled') . '.', 'product' => $product]);
+        $product->refresh();
+        return response()->json([
+            'message' => "{$product->name} " . ($product->is_available ? 'enabled' : 'disabled') . '.',
+            'product' => $product
+        ]);
     }
 
     public function destroyProduct(Product $product)

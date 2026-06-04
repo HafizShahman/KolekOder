@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    protected $fillable = ['customer_id', 'shop_id', 'order_number', 'type', 'total_amount', 'total_cups', 'status', 'notes', 'is_archived', 'business_date'];
+    protected $fillable = ['customer_id', 'shop_id', 'order_number', 'type', 'total_amount', 'total_cups', 'status', 'notes', 'is_archived', 'business_date', 'tracking_token'];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
@@ -43,7 +43,8 @@ class Order extends Model
                 $start = \Illuminate\Support\Carbon::parse($businessDate->toDateString() . ' ' . $dayStartTime);
                 $end = $start->copy()->addDay();
                 
-                $shiftCount = static::where('shop_id', $order->shop_id)
+                $shiftCount = static::lockForUpdate()
+                    ->where('shop_id', $order->shop_id)
                     ->where('created_at', '>=', $start)
                     ->where('created_at', '<', $end)
                     ->count() + 1;
