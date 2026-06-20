@@ -34,7 +34,7 @@ class SettingController extends Controller
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
             'shop_logo' => 'nullable|image|max:512',
-            'day_start_time' => 'nullable|string|regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/',
+            'day_start_time' => ['nullable', 'string', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/'],
             'redemption_threshold' => 'nullable|integer|min:1|max:9999',
             'redemption_reward' => 'nullable|string|max:255',
         ]);
@@ -61,7 +61,7 @@ class SettingController extends Controller
             'initial' => 'nullable|string|max:10|alpha_dash',
             'shop_address' => 'nullable|string|max:500',
             'shop_logo' => 'nullable|image|max:512',
-            'day_start_time' => 'nullable|string|regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/',
+            'day_start_time' => ['nullable', 'string', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/'],
             'redemption_threshold' => 'nullable|integer|min:1|max:9999',
             'redemption_reward' => 'nullable|string|max:255',
         ]);
