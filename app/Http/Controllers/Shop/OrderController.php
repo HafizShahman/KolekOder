@@ -10,13 +10,17 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
     public function index(Request $request)
     {
         $shop = auth()->user()->shop;
-        $query = Order::with(['customer', 'items.product'])->where('shop_id', $shop->id)->latest();
+        $query = Order::with(['customer', 'items.product'])
+            ->where('shop_id', $shop->id)
+            ->where('is_archived', 0)
+            ->latest();
 
         if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('type')) $query->where('type', $request->type);
@@ -29,10 +33,13 @@ class OrderController extends Controller
         }
 
         $orders = $query->paginate(15)->withQueryString();
-        $totalOrders = Order::where('shop_id', $shop->id)->count();
-        $pendingCount = Order::where('shop_id', $shop->id)->where('status', 'pending')->count();
-        $preparingCount = Order::where('shop_id', $shop->id)->where('status', 'preparing')->count();
-        $completedCount = Order::where('shop_id', $shop->id)->where('status', 'completed')->count();
+
+        // Stats scoped to unarchived orders, matching the list above
+        $statsQuery = Order::where('shop_id', $shop->id)->where('is_archived', 0);
+        $totalOrders = (clone $statsQuery)->count();
+        $pendingCount = (clone $statsQuery)->where('status', 'pending')->count();
+        $preparingCount = (clone $statsQuery)->where('status', 'preparing')->count();
+        $completedCount = (clone $statsQuery)->where('status', 'completed')->count();
 
         return view('shop.orders.index', compact('orders', 'totalOrders', 'pendingCount', 'preparingCount', 'completedCount'));
     }
@@ -76,7 +83,7 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.variant' => 'nullable|string',
             'items.*.addons' => 'nullable|array',
-            'customer_id' => 'nullable|exists:customers,id',
+            'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('shop_id', $shop->id)],
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -157,21 +164,8 @@ class OrderController extends Controller
         $shop = auth()->user()->shop;
         abort_if($order->shop_id !== $shop->id, 403);
         $request->validate(['status' => 'required|in:pending,preparing,completed,cancelled']);
-        $oldStatus = $order->status;
-        $order->update(['status' => $request->status]);
 
-        // Award point only when completed
-        if ($oldStatus !== 'completed' && $request->status === 'completed' && $order->customer_id) {
-            $order->customer()->increment('collect_points', $order->total_cups);
-        } elseif ($oldStatus === 'completed' && $request->status !== 'completed' && $order->customer_id) {
-            // Remove point if status is changed away from completed
-            $customer = $order->customer;
-            if ($customer && $customer->collect_points > 0) {
-                // Ensure we don't decrement below 0
-                $decrementAmount = min($order->total_cups, $customer->collect_points);
-                $customer->decrement('collect_points', $decrementAmount);
-            }
-        }
+        $this->applyStatusChange($order, $request->status);
 
         return back()->with('success', "Order {$order->order_number} updated to {$request->status}.");
     }
@@ -230,7 +224,7 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.variant' => 'nullable|string',
             'items.*.addons' => 'nullable|array',
-            'customer_id' => 'nullable|exists:customers,id',
+            'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('shop_id', $shop->id)],
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -332,21 +326,7 @@ class OrderController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $oldStatus = $order->status;
-        $order->update(['status' => $request->status]);
-
-        // Award point only when completed
-        if ($oldStatus !== 'completed' && $request->status === 'completed' && $order->customer_id) {
-            $order->customer()->increment('collect_points', $order->total_cups);
-        } elseif ($oldStatus === 'completed' && $request->status !== 'completed' && $order->customer_id) {
-            // Remove point if status is changed away from completed
-            $customer = $order->customer;
-            if ($customer && $customer->collect_points > 0) {
-                // Ensure we don't decrement below 0
-                $decrementAmount = min($order->total_cups, $customer->collect_points);
-                $customer->decrement('collect_points', $decrementAmount);
-            }
-        }
+        $this->applyStatusChange($order, $request->status);
 
         broadcast(new OrderStatusUpdated($order->fresh()));
 
@@ -414,5 +394,41 @@ class OrderController extends Controller
             'stats' => $stats,
             'orders' => $orders
         ]);
+    }
+
+    /**
+     * Atomically transition an order's status and adjust loyalty points.
+     *
+     * The order row is locked for the duration of the transaction so two
+     * concurrent status updates can't both observe a non-completed status
+     * and award (or reverse) points twice.
+     */
+    private function applyStatusChange(Order $order, string $newStatus): void
+    {
+        DB::transaction(function () use ($order, $newStatus) {
+            $locked = Order::whereKey($order->getKey())->lockForUpdate()->first();
+            $oldStatus = $locked->status;
+
+            if ($oldStatus === $newStatus) {
+                return;
+            }
+
+            $locked->update(['status' => $newStatus]);
+
+            // Award points only on the transition into "completed"
+            if ($oldStatus !== 'completed' && $newStatus === 'completed' && $locked->customer_id) {
+                $locked->customer()->increment('collect_points', $locked->total_cups);
+            } elseif ($oldStatus === 'completed' && $newStatus !== 'completed' && $locked->customer_id) {
+                // Reverse the points if moved away from completed, never below 0
+                $customer = $locked->customer;
+                if ($customer && $customer->collect_points > 0) {
+                    $decrementAmount = min($locked->total_cups, $customer->collect_points);
+                    $customer->decrement('collect_points', $decrementAmount);
+                }
+            }
+        });
+
+        // Keep the in-memory instance (used for the response / broadcast) in sync
+        $order->refresh();
     }
 }

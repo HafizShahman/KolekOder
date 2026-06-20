@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\FavoriteOrder;
+use App\Models\Order;
 use Illuminate\Http\Request;
 
 class FavoriteOrderController extends Controller
@@ -44,16 +45,35 @@ class FavoriteOrderController extends Controller
         $user = auth()->user();
         $customerIds = Customer::where('user_id', $user->id)->pluck('id');
 
-        // Verify the order belongs to one of this user's customer records
-        $customerId = $customerIds->first();
-        if (!$customerId) {
+        if ($customerIds->isEmpty()) {
             return response()->json(['message' => 'No customer profile found.'], 422);
         }
 
+        // Verify the order actually belongs to one of this user's customer records
+        $order = Order::with('items.product')
+            ->where('id', $request->order_id)
+            ->whereIn('customer_id', $customerIds)
+            ->first();
+
+        if (!$order) {
+            return response()->json(['message' => 'Order not found.'], 404);
+        }
+
+        // Snapshot the order's items so the favorite stays reorderable
+        // even if the original order is later archived or changed.
+        $orderData = $order->items->map(fn ($item) => [
+            'product_id'   => $item->product_id,
+            'product_name' => $item->product?->name,
+            'quantity'     => $item->quantity,
+            'unit_price'   => $item->unit_price,
+            'variant'      => $item->variant,
+            'addons'       => $item->addons,
+        ])->all();
+
         $favorite = FavoriteOrder::create([
-            'customer_id' => $customerId,
-            'order_id'    => $request->order_id,
-            'name'        => $request->name,
+            'customer_id' => $order->customer_id,
+            'name'        => $request->name ?: ('Order #' . $order->order_number),
+            'order_data'  => $orderData,
         ]);
 
         return response()->json(['message' => 'Favorite saved.', 'favorite' => $favorite], 201);

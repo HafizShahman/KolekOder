@@ -15,7 +15,6 @@ class OrderStatusUpdated implements ShouldBroadcast
 
     public function __construct(public Order $order)
     {
-        $this->order->load(['items.product']);
     }
 
     /**
@@ -32,8 +31,19 @@ class OrderStatusUpdated implements ShouldBroadcast
         return 'OrderStatusUpdated';
     }
 
+    /**
+     * Only broadcast non-sensitive status fields. This is a public channel,
+     * so never expose customer details, notes, or item data here.
+     */
     public function broadcastWith(): array
     {
-        return ['order' => $this->order];
+        return [
+            'order' => [
+                'id'           => $this->order->id,
+                'order_number' => $this->order->order_number,
+                'status'       => $this->order->status,
+                'updated_at'   => $this->order->updated_at,
+            ],
+        ];
     }
 }

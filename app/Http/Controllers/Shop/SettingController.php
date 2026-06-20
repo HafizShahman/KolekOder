@@ -10,6 +10,7 @@ use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class SettingController extends Controller
 {
@@ -359,7 +360,7 @@ class SettingController extends Controller
 
         $request->validate([
             'product_ids' => 'required|array',
-            'product_ids.*' => 'required|integer|exists:products,id',
+            'product_ids.*' => ['required', 'integer', Rule::exists('products', 'id')->where('shop_id', $shop->id)],
         ]);
 
         $productIds = $request->product_ids;
@@ -402,7 +403,7 @@ class SettingController extends Controller
         ]);
 
         auth()->user()->update($request->only('name', 'email'));
-        return response()->json(['message' => 'Profile updated!', 'user' => auth()->user()]);
+        return response()->json(['message' => 'Profile updated!', 'user' => auth()->user()->fresh()]);
     }
 
     public function apiUpdatePassword(Request $request)

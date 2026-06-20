@@ -52,20 +52,40 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn('tracking_token');
-            $table->dropIndex(['shop_id', 'status']);
-            $table->dropIndex(['shop_id', 'is_archived']);
-            $table->dropIndex(['shop_id', 'business_date']);
+        $orderIndexes = Schema::getIndexListing('orders');
+        Schema::table('orders', function (Blueprint $table) use ($orderIndexes) {
+            if (in_array('orders_shop_id_status_index', $orderIndexes)) {
+                $table->dropIndex(['shop_id', 'status']);
+            }
+            if (in_array('orders_shop_id_is_archived_index', $orderIndexes)) {
+                $table->dropIndex(['shop_id', 'is_archived']);
+            }
+            if (in_array('orders_shop_id_business_date_index', $orderIndexes)) {
+                $table->dropIndex(['shop_id', 'business_date']);
+            }
         });
 
-        Schema::table('customers', function (Blueprint $table) {
-            $table->dropIndex(['shop_id']);
-            $table->dropIndex(['user_id']);
+        if (Schema::hasColumn('orders', 'tracking_token')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropColumn('tracking_token');
+            });
+        }
+
+        $customerIndexes = Schema::getIndexListing('customers');
+        Schema::table('customers', function (Blueprint $table) use ($customerIndexes) {
+            if (in_array('customers_shop_id_index', $customerIndexes)) {
+                $table->dropIndex(['shop_id']);
+            }
+            if (in_array('customers_user_id_index', $customerIndexes)) {
+                $table->dropIndex(['user_id']);
+            }
         });
 
-        Schema::table('shops', function (Blueprint $table) {
-            $table->dropUnique(['initial']);
+        $shopIndexes = Schema::getIndexListing('shops');
+        Schema::table('shops', function (Blueprint $table) use ($shopIndexes) {
+            if (in_array('shops_initial_unique', $shopIndexes)) {
+                $table->dropUnique(['initial']);
+            }
         });
     }
 };

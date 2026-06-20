@@ -21,7 +21,7 @@ class ProfileController extends Controller
         ]);
 
         auth()->user()->update($request->only('name', 'email'));
-        return response()->json(['message' => 'Profile updated!', 'user' => auth()->user()]);
+        return response()->json(['message' => 'Profile updated!', 'user' => auth()->user()->fresh()]);
     }
 
     public function apiUpdatePassword(Request $request)

@@ -20,7 +20,12 @@ class PublicShopController extends Controller
     public function getShop($initial)
     {
         $shop = Shop::where('initial', $initial)->where('is_active', true)->firstOrFail();
-        return response()->json(['shop' => $shop]);
+
+        // Only expose branding/loyalty fields — never internal data like user_id.
+        return response()->json(['shop' => $shop->only([
+            'id', 'shop_name', 'initial', 'shop_logo', 'shop_address',
+            'color_setting', 'redemption_threshold', 'redemption_reward', 'is_active',
+        ])]);
     }
 
     /**
@@ -139,6 +144,10 @@ class PublicShopController extends Controller
 
             $trackingToken = bin2hex(random_bytes(16));
 
+            // Strip any markup from customer-supplied values before storing them in notes
+            $customerName  = strip_tags((string) $request->customer_name);
+            $customerPhone = strip_tags((string) $request->customer_phone);
+
             $order = Order::create([
                 'shop_id'        => $shop->id,
                 'customer_id'    => $customerId,
@@ -146,7 +155,7 @@ class PublicShopController extends Controller
                 'total_cups'     => $totalCups,
                 'status'         => 'pending',
                 'tracking_token' => $trackingToken,
-                'notes'          => "Public Order: {$request->customer_name}" . ($request->customer_phone ? " ({$request->customer_phone})" : ""),
+                'notes'          => "Public Order: {$customerName}" . ($customerPhone ? " ({$customerPhone})" : ""),
             ]);
 
             foreach ($orderItemsData as $d) {
