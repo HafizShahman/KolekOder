@@ -24,13 +24,16 @@ class Order extends Model
             
             // Calculate business date if not set
             if (empty($order->business_date)) {
-                $dayStartTime = $shop?->day_start_time ?: '00:00';
-                $currentTime = $now->format('H:i');
-                
-                if ($currentTime < $dayStartTime) {
-                    $order->business_date = $now->copy()->subDay()->toDateString();
+                if ($shop) {
+                    $order->business_date = $shop->getBusinessDate($now);
                 } else {
-                    $order->business_date = $now->toDateString();
+                    $dayStartTime = '00:00';
+                    $currentTime = $now->format('H:i');
+                    if ($currentTime < $dayStartTime) {
+                        $order->business_date = $now->copy()->subDay()->toDateString();
+                    } else {
+                        $order->business_date = $now->toDateString();
+                    }
                 }
             }
 
@@ -39,9 +42,12 @@ class Order extends Model
                 $businessDate = \Illuminate\Support\Carbon::parse($order->business_date);
                 $dateCode = $businessDate->format('dm');
                 
-                $dayStartTime = $shop?->day_start_time ?: '00:00';
-                $start = \Illuminate\Support\Carbon::parse($businessDate->toDateString() . ' ' . $dayStartTime);
-                $end = $start->copy()->addDay();
+                if ($shop) {
+                    [$start, $end] = $shop->getShiftRangeForBusinessDate($businessDate);
+                } else {
+                    $start = $businessDate->copy()->startOfDay();
+                    $end = $start->copy()->addDay();
+                }
                 
                 $shiftCount = static::lockForUpdate()
                     ->where('shop_id', $order->shop_id)

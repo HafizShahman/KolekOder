@@ -38,9 +38,14 @@ class SettingController extends Controller
             'day_start_time' => ['nullable', 'string', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/'],
             'redemption_threshold' => 'nullable|integer|min:1|max:9999',
             'redemption_reward' => 'nullable|string|max:255',
+            'operation_hours' => 'nullable|string',
         ]);
 
         $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time', 'redemption_threshold', 'redemption_reward');
+
+        if ($request->has('operation_hours')) {
+            $data['operation_hours'] = json_decode($request->input('operation_hours'), true);
+        }
 
         if ($request->hasFile('shop_logo')) {
             $file = $request->file('shop_logo');
@@ -65,9 +70,14 @@ class SettingController extends Controller
             'day_start_time' => ['nullable', 'string', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/'],
             'redemption_threshold' => 'nullable|integer|min:1|max:9999',
             'redemption_reward' => 'nullable|string|max:255',
+            'operation_hours' => 'nullable|string',
         ]);
 
         $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time', 'redemption_threshold', 'redemption_reward');
+
+        if ($request->has('operation_hours')) {
+            $data['operation_hours'] = json_decode($request->input('operation_hours'), true);
+        }
 
         if ($request->hasFile('shop_logo')) {
             $file = $request->file('shop_logo');

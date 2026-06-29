@@ -25,6 +25,7 @@ class PublicShopController extends Controller
         return response()->json(['shop' => $shop->only([
             'id', 'shop_name', 'initial', 'shop_logo', 'shop_address',
             'color_setting', 'redemption_threshold', 'redemption_reward', 'is_active',
+            'operation_hours', 'day_start_time'
         ])]);
     }
 
@@ -80,6 +81,10 @@ class PublicShopController extends Controller
 
         // Verify the shop is active
         $shop = Shop::where('id', $request->shop_id)->where('is_active', true)->firstOrFail();
+
+        if ($shop->isClosed()) {
+            return response()->json(['message' => 'The shop is currently closed.'], 422);
+        }
 
         return DB::transaction(function () use ($request, $shop) {
             $totalAmount = 0;
