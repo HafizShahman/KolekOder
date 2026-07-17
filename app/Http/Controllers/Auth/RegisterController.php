@@ -46,7 +46,21 @@ class RegisterController extends Controller
 
     public function apiRegister(\Illuminate\Http\Request $request)
     {
-        $validator = $this->validator($request->all());
+        $accountType = $request->input('account_type', 'customer');
+
+        $rules = [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'account_type' => ['nullable', 'in:customer,shop'],
+        ];
+
+        if ($accountType === 'shop') {
+            $rules['shop_name'] = ['required', 'string', 'max:255'];
+            $rules['initial'] = ['required', 'string', 'max:10', 'alpha_dash', 'unique:shops,initial'];
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -55,7 +69,25 @@ class RegisterController extends Controller
             ], 422);
         }
 
-        $user = $this->create($request->all());
+        $user = DB::transaction(function () use ($request, $accountType) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => $accountType === 'shop' ? 'shop' : 'customer',
+            ]);
+
+            if ($accountType === 'shop') {
+                Shop::create([
+                    'user_id' => $user->id,
+                    'shop_name' => $request->shop_name,
+                    'initial' => $request->initial,
+                    'is_active' => true,
+                ]);
+            }
+
+            return $user;
+        });
 
         // Authenticate the user directly
         $token = $user->createToken('auth_token')->plainTextToken;
