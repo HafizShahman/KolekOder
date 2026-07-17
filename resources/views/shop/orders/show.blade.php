@@ -72,6 +72,9 @@
                                         @endforeach
                                     @endif
                                 </div>
+                                @if ($item->note)
+                                    <p class="text-xs text-amber-600 italic mt-1.5">&ldquo;{{ $item->note }}&rdquo;</p>
+                                @endif
                             </div>
                             <div class="text-right">
                                 <p class="text-sm font-bold text-foreground">RM {{ number_format($item->subtotal, 2) }}</p>

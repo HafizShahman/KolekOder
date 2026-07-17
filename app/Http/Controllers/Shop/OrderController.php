@@ -83,6 +83,7 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.variant' => 'nullable|string',
             'items.*.addons' => 'nullable|array',
+            'items.*.note' => 'nullable|string|max:200',
             'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('shop_id', $shop->id)],
             'notes' => 'nullable|string|max:500',
         ]);
@@ -120,6 +121,8 @@ class OrderController extends Controller
             $totalAmount += $sub;
             $totalCups += $qty;
 
+            $note = trim(strip_tags((string) ($item['note'] ?? '')));
+
             $orderItemsData[] = [
                 'product_id' => $product->id,
                 'quantity' => $qty,
@@ -127,6 +130,7 @@ class OrderController extends Controller
                 'subtotal' => $sub,
                 'variant' => $item['variant'] ?? null,
                 'addons' => !empty($selectedAddons) ? $selectedAddons : null,
+                'note' => $note !== '' ? $note : null,
             ];
         }
 
@@ -224,6 +228,7 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.variant' => 'nullable|string',
             'items.*.addons' => 'nullable|array',
+            'items.*.note' => 'nullable|string|max:200',
             'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('shop_id', $shop->id)],
             'notes' => 'nullable|string|max:500',
         ]);
@@ -265,6 +270,8 @@ class OrderController extends Controller
             $totalAmount += $sub;
             $totalCups += $qty;
 
+            $note = trim(strip_tags((string) ($item['note'] ?? '')));
+
             $orderItemsData[] = [
                 'product_id' => $product->id,
                 'quantity' => $qty,
@@ -272,6 +279,7 @@ class OrderController extends Controller
                 'subtotal' => $sub,
                 'variant' => $item['variant'] ?? null,
                 'addons' => !empty($selectedAddons) ? $selectedAddons : null,
+                'note' => $note !== '' ? $note : null,
             ];
         }
 

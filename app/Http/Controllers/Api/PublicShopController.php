@@ -75,6 +75,7 @@ class PublicShopController extends Controller
             'items.*.quantity'   => 'required|integer|min:1',
             'items.*.variant'    => 'nullable|string',
             'items.*.addons'     => 'nullable|array',
+            'items.*.note'       => 'nullable|string|max:200',
             'customer_name' => 'required|string|max:255',
             'customer_phone'=> 'nullable|string|max:30',
         ]);
@@ -126,6 +127,9 @@ class PublicShopController extends Controller
                 $totalAmount += $sub;
                 $totalCups   += $qty;
 
+                // Strip any markup from the customer-supplied note before storing it
+                $note = trim(strip_tags((string) ($item['note'] ?? '')));
+
                 $orderItemsData[] = [
                     'product_id' => $product->id,
                     'quantity'   => $qty,
@@ -133,6 +137,7 @@ class PublicShopController extends Controller
                     'subtotal'   => $sub,
                     'variant'    => $item['variant'] ?? null,
                     'addons'     => !empty($selectedAddons) ? $selectedAddons : [],
+                    'note'       => $note !== '' ? $note : null,
                 ];
             }
 
