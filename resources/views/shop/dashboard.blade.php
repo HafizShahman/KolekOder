@@ -18,7 +18,7 @@
 
         {{-- Period Selector --}}
         <div class="flex gap-2">
-            @foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'] as $key => $label)
+            @foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $key => $label)
                 <a href="{{ route('shop.dashboard', ['period' => $key]) }}"
                     class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all {{ $period === $key ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-card border border-border text-muted-foreground hover:text-foreground' }}">
                     {{ $label }}

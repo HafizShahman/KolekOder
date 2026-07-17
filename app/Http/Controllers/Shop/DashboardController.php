@@ -32,6 +32,10 @@ class DashboardController extends Controller
                 $startDate = $now->copy()->startOfMonth()->toDateString();
                 $endDate = $now->copy()->endOfMonth()->toDateString();
                 break;
+            case 'yearly':
+                $startDate = $now->copy()->startOfYear()->toDateString();
+                $endDate = $now->copy()->endOfYear()->toDateString();
+                break;
             default: // daily
                 $businessDate = $shop->getBusinessDate($now);
                 break;
@@ -152,6 +156,10 @@ class DashboardController extends Controller
             case 'monthly':
                 $startDate = $now->copy()->startOfMonth()->toDateString();
                 $endDate = $now->copy()->endOfMonth()->toDateString();
+                break;
+            case 'yearly':
+                $startDate = $now->copy()->startOfYear()->toDateString();
+                $endDate = $now->copy()->endOfYear()->toDateString();
                 break;
             default: // daily
                 $businessDate = $shop->getBusinessDate($now);
