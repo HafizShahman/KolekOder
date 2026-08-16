@@ -407,7 +407,12 @@ class SettingController extends Controller
 
     public function apiUserSettings()
     {
-        return response()->json(['user' => auth()->user()->load('shop')]);
+        $user = auth()->user()->load('shop');
+        // Exclude large base64 blobs from the shop to keep the response lean
+        if ($user->shop) {
+            $user->shop->makeHidden(['shop_logo', 'notification_sound']);
+        }
+        return response()->json(['user' => $user]);
     }
 
     public function updateUser(Request $request)
