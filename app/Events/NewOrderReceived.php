@@ -35,6 +35,23 @@ class NewOrderReceived implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return ['order' => $this->order];
+        $orderArray = $this->order->toArray();
+        
+        // Remove large base64 strings to prevent "Payload too large" errors from Pusher/Reverb
+        
+        // Remove the shop relation entirely if loaded (might contain shop_logo base64)
+        if (isset($orderArray['shop'])) {
+            unset($orderArray['shop']);
+        }
+        
+        if (isset($orderArray['items'])) {
+            foreach ($orderArray['items'] as &$item) {
+                if (isset($item['product']['image'])) {
+                    unset($item['product']['image']);
+                }
+            }
+        }
+        
+        return ['order' => $orderArray];
     }
 }

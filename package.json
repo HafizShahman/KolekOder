@@ -9,13 +9,16 @@
         "build": "mix --production"
     },
     "devDependencies": {
+        "@laravel/echo-react": "^2.4.0",
         "@popperjs/core": "^2.11.6",
         "@tailwindcss/postcss": "^4.2.1",
-        "axios": "^1.11.0",
+        "axios": "^1.19.0",
         "bootstrap": "^5.2.3",
         "concurrently": "^9.0.1",
+        "laravel-echo": "^2.4.0",
         "laravel-mix": "^6.0.49",
         "postcss": "^8.5.8",
+        "pusher-js": "^8.6.0",
         "sass": "^1.56.1",
         "tailwindcss": "^4.0.0"
     },

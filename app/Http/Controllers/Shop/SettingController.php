@@ -39,6 +39,7 @@ class SettingController extends Controller
             'redemption_threshold' => 'nullable|integer|min:1|max:9999',
             'redemption_reward' => 'nullable|string|max:255',
             'operation_hours' => 'nullable|string',
+            'notification_sound' => 'nullable|file|mimes:mp3,wav,ogg,m4a,aac|max:2048',
         ]);
 
         $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time', 'redemption_threshold', 'redemption_reward');
@@ -52,6 +53,13 @@ class SettingController extends Controller
             $mime = $file->getMimeType();
             $fileContent = file_get_contents($file->getRealPath());
             $data['shop_logo'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
+        }
+
+        if ($request->hasFile('notification_sound')) {
+            $file = $request->file('notification_sound');
+            $mime = $file->getMimeType();
+            $fileContent = file_get_contents($file->getRealPath());
+            $data['notification_sound'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
         }
 
         $shop->update($data);
@@ -71,6 +79,7 @@ class SettingController extends Controller
             'redemption_threshold' => 'nullable|integer|min:1|max:9999',
             'redemption_reward' => 'nullable|string|max:255',
             'operation_hours' => 'nullable|string',
+            'notification_sound' => 'nullable|file|mimes:mp3,wav,ogg,m4a,aac|max:2048',
         ]);
 
         $data = $request->only('shop_name', 'initial', 'shop_address', 'day_start_time', 'redemption_threshold', 'redemption_reward');
@@ -84,6 +93,13 @@ class SettingController extends Controller
             $mime = $file->getMimeType();
             $fileContent = file_get_contents($file->getRealPath());
             $data['shop_logo'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
+        }
+
+        if ($request->hasFile('notification_sound')) {
+            $file = $request->file('notification_sound');
+            $mime = $file->getMimeType();
+            $fileContent = file_get_contents($file->getRealPath());
+            $data['notification_sound'] = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
         }
 
         $shop->update($data);
